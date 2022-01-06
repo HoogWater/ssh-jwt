@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -186,25 +185,20 @@ func main() {
 			if pty0 != nil {
 				pty1 := pty0.(string)
 				if pty1 == "true" {
-					logrus.Debugf("Denying PTY")
+					logrus.Debugf("Allowing PTY")
 					return true
 				}
 			}
-			logrus.Debugf("Allowing PTY")
+			logrus.Debugf("Denying PTY")
 			return false
 		}),
 		PasswordHandler: ssh.PasswordHandler(func(ctx ssh.Context, password string) bool {
 			//SAMPLE: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhaWQiOiIyMzQyNDM0NTM0NTMiLCJtaWQiOiJHVEUzNDU2IiwiZXhwIjoxNTg3NTI5NjkzLCJyZnciOiIwLjAuMC4wOjQzNDMiLCJsZnciOiIyMDEuMjEuNDMuNDU6ODA4MCJ9.iaUGlrO-3HWdE-8irizqMfHLYV0Ctiu3N3qdEdirwJk
 			//SAMPLE2: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhaWQiOiIyMzQyNDM0NTM0NTMiLCJtaWQiOiJHVEUzNDU2IiwiZXhwIjoxNTg3NTI5NjkzLCJyZnciOiIwLjAuMC4wOjQzNDMiLCJsZnciOiIxMC4xLjEuMjU0OjgwIn0.ynmGKtRJyr5KowmD34m3A4OBnMdcmj9GCC0Vt3oyZHc
 			tokenString := password
-			token, err := jwt.Parse(bytes.NewReader([]byte(tokenString)), jwt.WithVerify(opt.jwtSignatureAlgorithm, jwtKey))
+			token, err := jwt.Parse([]byte(tokenString), jwt.WithVerify(opt.jwtSignatureAlgorithm, jwtKey))
 			if err != nil {
 				logrus.Infof("Failed to parse JWT token. err=%s", err)
-				return false
-			}
-			err = token.Verify()
-			if err != nil {
-				logrus.Infof("Invalid token received. err=%s", err)
 				return false
 			}
 
@@ -244,6 +238,10 @@ func main() {
 			ptyReq, winCh, isPty := s.Pty()
 			if isPty {
 				cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
+				/* Potential to run as different user
+				cmd.SysProcAttr = &syscall.SysProcAttr{}
+				cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
+				*/
 				f, err := pty.Start(cmd)
 				if err != nil {
 					panic(err)

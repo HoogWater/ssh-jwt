@@ -1,3 +1,5 @@
 test_jwt.token
 test_rsa.key
 test_rsa.pub
+ssh-jwt
+vendor/*
